@@ -1429,7 +1429,6 @@ static ssize_t mdss_mdp_show_capabilities(struct device *dev,
 	return cnt;
 }
 
-<<<<<<< HEAD
 static ssize_t mdss_mdp_store_max_limit_bw(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t len)
 {
@@ -1453,12 +1452,6 @@ static DEVICE_ATTR(bw_mode_bitmap, S_IRUGO | S_IWUSR | S_IWGRP, NULL,
 static struct attribute *mdp_fs_attrs[] = {
 	&dev_attr_caps.attr,
 	&dev_attr_bw_mode_bitmap.attr,
-=======
-static DEVICE_ATTR(caps, S_IRUGO, mdss_mdp_show_capabilities, NULL);
-
-static struct attribute *mdp_fs_attrs[] = {
-	&dev_attr_caps.attr,
->>>>>>> 5144e53c6e096cda3761952d1cc2924f039434f8
 	NULL
 };
 
@@ -2622,7 +2615,6 @@ static void mdss_mdp_parse_vbif_qos(struct platform_device *pdev)
 	}
 }
 
-<<<<<<< HEAD
 static void mdss_mdp_parse_max_bw_array(const u32 *arr,
 		struct mdss_max_bw_settings *max_bw_settings, int count)
 {
@@ -2665,8 +2657,6 @@ static void mdss_mdp_parse_max_bandwidth(struct platform_device *pdev)
 	mdata->max_bw_settings_cnt = max_bw_settings_cnt;
 }
 
-=======
->>>>>>> 5144e53c6e096cda3761952d1cc2924f039434f8
 static int mdss_mdp_parse_dt_misc(struct platform_device *pdev)
 {
 	struct mdss_data_type *mdata = platform_get_drvdata(pdev);
@@ -2790,12 +2780,9 @@ static int mdss_mdp_parse_dt_misc(struct platform_device *pdev)
 	if (rc)
 		pr_debug("max bandwidth (per pipe) property not specified\n");
 
-<<<<<<< HEAD
 
 	mdss_mdp_parse_max_bandwidth(pdev);
 
-=======
->>>>>>> 5144e53c6e096cda3761952d1cc2924f039434f8
 	mdata->nclk_lvl = mdss_mdp_parse_dt_prop_len(pdev,
 					"qcom,mdss-clk-levels");
 

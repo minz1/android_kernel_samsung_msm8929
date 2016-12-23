@@ -923,7 +923,6 @@ static void __mdss_mdp_perf_calc_ctl_helper(struct mdss_mdp_ctl *ctl,
 			*(perf->bw_vote_mode));
 }
 
-<<<<<<< HEAD
 static u32 mdss_check_for_flip(struct mdss_mdp_ctl *ctl)
 {
 	u32 i, panel_orientation;
@@ -994,19 +993,14 @@ static int mdss_mdp_set_threshold_max_bandwidth(struct mdss_mdp_ctl *ctl)
 	return max;
 }
 
-=======
->>>>>>> 5144e53c6e096cda3761952d1cc2924f039434f8
 int mdss_mdp_perf_bw_check(struct mdss_mdp_ctl *ctl,
 		struct mdss_mdp_pipe **left_plist, int left_cnt,
 		struct mdss_mdp_pipe **right_plist, int right_cnt)
 {
 	struct mdss_data_type *mdata = ctl->mdata;
 	struct mdss_mdp_perf_params perf;
-<<<<<<< HEAD
+
 	u32 bw, threshold, max_bw;
-=======
-	u32 bw, threshold;
->>>>>>> 5144e53c6e096cda3761952d1cc2924f039434f8
 
 	/* we only need bandwidth check on real-time clients (interfaces) */
 	if (ctl->intf_type == MDSS_MDP_NO_INTF)
@@ -1021,7 +1015,6 @@ int mdss_mdp_perf_bw_check(struct mdss_mdp_ctl *ctl,
 	pr_debug("calculated bandwidth=%uk\n", bw);
 
 	threshold = ctl->is_video_mode ? mdata->max_bw_low : mdata->max_bw_high;
-<<<<<<< HEAD
 
 	max_bw = mdss_mdp_set_threshold_max_bandwidth(ctl);
 
@@ -1030,8 +1023,6 @@ int mdss_mdp_perf_bw_check(struct mdss_mdp_ctl *ctl,
 
 	pr_debug("final threshold bw limit = %d\n", threshold);
 
-=======
->>>>>>> 5144e53c6e096cda3761952d1cc2924f039434f8
 	if (bw > threshold) {
 		pr_debug("exceeds bandwidth: %ukb > %ukb\n", bw, threshold);
 		return -E2BIG;
