@@ -1733,7 +1733,13 @@ static int wcnss_wlan_suspend(struct device *dev)
 	if (penv && dev && (dev == &penv->pdev->dev) &&
 	    penv->smd_channel_ready &&
 	    penv->pm_ops && penv->pm_ops->suspend)
-		return penv->pm_ops->suspend(dev);
+	{
+#if defined(CONFIG_MACH_A5U_EUR_OPEN)
+	    wcnss_ldo18_off();
+	    pr_err("wcnss: wcnss_ldo18_off!!\n");
+#endif
+	    return penv->pm_ops->suspend(dev);
+	}
 	return 0;
 }
 
@@ -1742,7 +1748,13 @@ static int wcnss_wlan_resume(struct device *dev)
 	if (penv && dev && (dev == &penv->pdev->dev) &&
 	    penv->smd_channel_ready &&
 	    penv->pm_ops && penv->pm_ops->resume)
-		return penv->pm_ops->resume(dev);
+	{
+#if defined(CONFIG_MACH_A5U_EUR_OPEN)
+	    wcnss_ldo18_on();
+	    pr_err("wcnss: wcnss_ldo18_on!!\n");
+#endif
+	    return penv->pm_ops->resume(dev);
+	}
 	return 0;
 }
 
@@ -3128,6 +3140,16 @@ void wcnss_flush_work(struct work_struct *work)
 		cancel_work_sync(cnss_work);
 }
 EXPORT_SYMBOL(wcnss_flush_work);
+
+/* wlan prop driver cannot invoke show_stack
+ * function directly, so to invoke this function it
+ * call wcnss_dump_stack function
+ */
+void wcnss_dump_stack(struct task_struct *task)
+{
+	show_stack(task, NULL);
+}
+EXPORT_SYMBOL(wcnss_dump_stack);
 
 /* wlan prop driver cannot invoke cancel_delayed_work_sync
  * function directly, so to invoke this function it call
