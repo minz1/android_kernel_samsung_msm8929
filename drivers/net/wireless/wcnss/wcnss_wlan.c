@@ -2665,7 +2665,7 @@ static ssize_t wcnss_ctrl_read(struct file *fp, char __user *user_buffer,
 {
 	int rc = 0;
 
-	if (!penv || !penv->device_opened)
+	if (!penv)
 		return -EFAULT;
 
 	rc = wait_event_interruptible(penv->wlan_config.wcnss_ctrl_wait,
@@ -3397,6 +3397,11 @@ wcnss_wlan_probe(struct platform_device *pdev)
 	mutex_init(&penv->pm_qos_mutex);
 	init_waitqueue_head(&penv->read_wait);
 	init_waitqueue_head(&penv->wlan_config.wcnss_ctrl_wait);
+
+	penv->user_cal_rcvd = 0;
+	penv->user_cal_read = 0;
+	penv->user_cal_exp_size = 0;
+	penv->user_cal_available = false;
 
 	penv->user_cal_rcvd = 0;
 	penv->user_cal_read = 0;
