@@ -1619,6 +1619,7 @@ static inline bool can_follow_write_pte(pte_t pte, unsigned int flags)
 	return pte_write(pte) ||
 		((flags & FOLL_FORCE) && (flags & FOLL_COW) && pte_dirty(pte));
 }
+
 /**
  * follow_page_mask - look up a page descriptor from a user-virtual address
  * @vma: vm_area_struct mapping @address
@@ -3917,11 +3918,10 @@ int handle_pte_fault(struct mm_struct *mm,
 	if (!pte_present(entry)) {
 		if (pte_none(entry)) {
 			if (vma->vm_ops)
-				return do_linear_fault(mm, vma, address, pte, pmd,
-						flags, entry);
-
-			return do_anonymous_page(mm, vma, address, pte, pmd,
-					flags);
+				return do_linear_fault(mm, vma, address,
+						pte, pmd, flags, entry);
+			return do_anonymous_page(mm, vma, address,
+						 pte, pmd, flags);
 		}
 		if (pte_file(entry))
 			return do_nonlinear_fault(mm, vma, address,

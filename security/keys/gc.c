@@ -189,8 +189,8 @@ static noinline void key_gc_unused_keys(struct list_head *keys)
 
 		/* Throw away the key data if the key is instantiated */
 		if (test_bit(KEY_FLAG_INSTANTIATED, &key->flags) &&
-				!test_bit(KEY_FLAG_NEGATIVE, &key->flags) &&
-				key->type->destroy)
+		    !test_bit(KEY_FLAG_NEGATIVE, &key->flags) &&
+		    key->type->destroy)
 			key->type->destroy(key);
 
 		security_key_free(key);
@@ -207,7 +207,7 @@ static noinline void key_gc_unused_keys(struct list_head *keys)
 		if (test_bit(KEY_FLAG_INSTANTIATED, &key->flags))
 			atomic_dec(&key->user->nikeys);
 
-		key_user_put(key->user);
+                key_user_put(key->user);
 
 		kfree(key->description);
 

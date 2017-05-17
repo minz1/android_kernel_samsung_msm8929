@@ -324,6 +324,20 @@ Hence Qualcomm's PMIC hard reboot implementation has been taken, but disabled. *
 			__raw_writel(0x77665502, restart_reason);
 		} else if (!strcmp(cmd, "rtc")) {
 			__raw_writel(0x77665503, restart_reason);
+#ifdef CONFIG_QCOM_HARDREBOOT_IMPLEMENTATION
+                } else if (!strcmp(cmd, "dm-verity device corrupted")) {
+                        qpnp_pon_set_restart_reason(
+                                PON_RESTART_REASON_DMVERITY_CORRUPTED);
+                        __raw_writel(0x77665508, restart_reason);
+                } else if (!strcmp(cmd, "dm-verity enforcing")) {
+                        qpnp_pon_set_restart_reason(
+                                PON_RESTART_REASON_DMVERITY_ENFORCE);
+                        __raw_writel(0x77665509, restart_reason);
+                } else if (!strcmp(cmd, "keys clear")) {
+                        qpnp_pon_set_restart_reason(
+                                PON_RESTART_REASON_KEYS_CLEAR);
+                        __raw_writel(0x7766550a, restart_reason);
+#endif
 		} else if (!strncmp(cmd, "oem-", 4)) {
 			unsigned long code;
 			int ret;
