@@ -25,6 +25,13 @@
 #include <linux/slab.h>
 #include <linux/clk.h>
 #include <linux/leds.h>
+#include <linux/unistd.h>
+#include <linux/syscalls.h>
+#include <linux/fcntl.h>
+#include <asm/uaccess.h>
+#include <linux/file.h>
+#include <linux/fs.h>
+#include <linux/stat.h>
 
 
 static void __iomem *msm_wcnss_base;
@@ -136,9 +143,8 @@ static struct vregs_info iris_vregs_pronto_v2[] = {
 
 /* WCNSS regulators for Pronto v2 hardware */
 static struct vregs_info pronto_vregs_pronto_v2[] = {
-	{"qcom,pronto-vddmx",  VREG_NULL_CONFIG,
-		RPM_REGULATOR_CORNER_SUPER_TURBO,  0,
-		RPM_REGULATOR_CORNER_SUPER_TURBO, 0,    NULL},
+	{"qcom,pronto-vddmx",  VREG_NULL_CONFIG, 1287500,  0,
+		1287500, 0,    NULL},
 	{"qcom,pronto-vddcx",  VREG_NULL_CONFIG, RPM_REGULATOR_CORNER_NORMAL,
 		RPM_REGULATOR_CORNER_NONE, RPM_REGULATOR_CORNER_SUPER_TURBO,
 		0,             NULL},
@@ -268,7 +274,65 @@ void  wcnss_iris_reset(u32 reg, void __iomem *pmu_conf_reg)
 	reg &= ~WCNSS_PMU_CFG_IRIS_RESET;
 	writel_relaxed(reg, pmu_conf_reg);
 }
+static void chipset_version(u32 reg)
+{
+	struct file *file;
+	loff_t pos = 0;
+	int fd;
+	u32 chipset_id;
+	char chipset[15];
+	char path[32] = "/persist/.wifichipset.info";
 
+	mm_segment_t old_fs = get_fs();
+
+	chipset_id = reg >> 16;
+
+	switch (chipset_id) {
+	case WCN3660:
+		memcpy(chipset, "WCN3660", sizeof("WCN3660"));
+		break;
+	case WCN3660A:
+		memcpy(chipset, "WCN3660A", sizeof("WCN3660A"));
+		break;
+	case WCN3660B:
+		memcpy(chipset, "WCN3660B", sizeof("WCN3660B"));
+		break;
+	case WCN3620:
+		memcpy(chipset, "WCN3620", sizeof("WCN3620"));
+		break;
+	case WCN3620A:
+		memcpy(chipset, "WCN3620A", sizeof("WCN3620A"));
+		break;
+	case WCN3610:
+		memcpy(chipset, "WCN3610", sizeof("WCN3610"));
+		break;
+	case WCN3610V1:
+		memcpy(chipset, "WCN3610V1", sizeof("WCN3610V1"));
+		break;
+	}
+
+	pr_info("wcnss: chipset: %s\n", chipset);
+
+	set_fs(KERNEL_DS);
+	fd = sys_open(path, O_RDWR | O_CREAT | O_TRUNC, 0644);
+
+	if(fd >=0){
+		file = fget(fd);
+		sys_fchmod(fd, 0644);
+
+		if(file){
+			vfs_write(file, chipset, strlen(chipset), &pos);
+			fput(file);
+		}
+		sys_close(fd);
+	}
+	else {
+		pr_err("Couldn't open (%s)\n", path);
+	}
+	set_fs(old_fs);
+
+	return;
+}
 static int
 configure_iris_xo(struct device *dev,
 			struct wcnss_wlan_config *cfg,
@@ -362,9 +426,9 @@ configure_iris_xo(struct device *dev,
 						WCNSS_PMU_CFG_IRIS_XO_READ_STS)
 					cpu_relax();
 
-				iris_reg = readl_relaxed(iris_read_reg);
-				pr_info("wcnss: IRIS Reg: %08x\n", iris_reg);
-
+			iris_reg = readl_relaxed(iris_read_reg);
+			pr_info("wcnss: IRIS Reg: %08x\n", iris_reg);
+			chipset_version(iris_reg);
 				if (validate_iris_chip_id(iris_reg) && i >= 4) {
 					pr_info("wcnss: IRIS Card absent/invalid\n");
 					auto_detect = WCNSS_XO_INVALID;

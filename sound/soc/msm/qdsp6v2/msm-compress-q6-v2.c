@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2015, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2016, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -165,14 +165,8 @@ struct msm_compr_audio {
 
 const u32 compr_codecs[] = {SND_AUDIOCODEC_AC3, SND_AUDIOCODEC_EAC3};
 
-static unsigned int supported_sample_rates[] = {
-	8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000, 64000,
-	88200, 96000, 176400, 192000
-};
-
 struct msm_compr_audio_effects {
 	struct bass_boost_params bass_boost;
-	struct pbe_params pbe;
 	struct virtualizer_params virtualizer;
 	struct reverb_params reverb;
 	struct eq_params equalizer;
@@ -340,7 +334,16 @@ static void compr_event_handler(uint32_t opcode,
 			       payload[3],
 			       payload[0],
 				prtd->byte_offset, prtd->copied_total, token);
-			atomic_set(&prtd->start, 0);
+
+			if (atomic_read(&prtd->drain) && prtd->last_buffer) {
+				pr_debug("wake up on drain\n");
+				prtd->drain_ready = 1;
+				wake_up(&prtd->drain_wait);
+				atomic_set(&prtd->drain, 0);
+				prtd->last_buffer = 0;
+			} else {
+				atomic_set(&prtd->start, 0);
+			}
 		} else {
 			pr_debug("ASM_DATA_EVENT_WRITE_DONE_V2 offset %d, length %d\n",
 				 prtd->byte_offset, token);
@@ -824,6 +827,7 @@ static int msm_compr_configure_dsp(struct snd_compr_stream *cstream)
 	int dir = IN, ret = 0;
 	struct audio_client *ac = prtd->audio_client;
 	uint32_t stream_index;
+
 	struct asm_softpause_params softpause = {
 		.enable = SOFT_PAUSE_ENABLE,
 		.period = SOFT_PAUSE_PERIOD,
@@ -1159,17 +1163,56 @@ static int msm_compr_set_params(struct snd_compr_stream *cstream,
 {
 	struct snd_compr_runtime *runtime = cstream->runtime;
 	struct msm_compr_audio *prtd = runtime->private_data;
-	int ret = 0, frame_sz = 0, delay_time_ms;
-	int i, num_rates;
+	int ret = 0, frame_sz = 0, delay_time_ms = 0;
 
 	pr_debug("%s\n", __func__);
 
-	num_rates = sizeof(supported_sample_rates)/sizeof(unsigned int);
-	for (i = 0; i < num_rates; i++)
-		if (params->codec.sample_rate == supported_sample_rates[i])
-			break;
-	if (i == num_rates)
-		return -EINVAL;
+	memcpy(&prtd->codec_param, params, sizeof(struct snd_compr_params));
+
+	/* ToDo: remove duplicates */
+	prtd->num_channels = prtd->codec_param.codec.ch_in;
+
+	switch (prtd->codec_param.codec.sample_rate) {
+	case SNDRV_PCM_RATE_8000:
+		prtd->sample_rate = 8000;
+		break;
+	case SNDRV_PCM_RATE_11025:
+		prtd->sample_rate = 11025;
+		break;
+	/* ToDo: What about 12K and 24K sample rates ? */
+	case SNDRV_PCM_RATE_16000:
+		prtd->sample_rate = 16000;
+		break;
+	case SNDRV_PCM_RATE_22050:
+		prtd->sample_rate = 22050;
+		break;
+	case SNDRV_PCM_RATE_32000:
+		prtd->sample_rate = 32000;
+		break;
+	case SNDRV_PCM_RATE_44100:
+		prtd->sample_rate = 44100;
+		break;
+	case SNDRV_PCM_RATE_48000:
+		prtd->sample_rate = 48000;
+		break;
+	case SNDRV_PCM_RATE_64000:
+		prtd->sample_rate = 64000;
+		break;
+	case SNDRV_PCM_RATE_88200:
+		prtd->sample_rate = 88200;
+		break;
+	case SNDRV_PCM_RATE_96000:
+		prtd->sample_rate = 96000;
+		break;
+	case SNDRV_PCM_RATE_176400:
+		prtd->sample_rate = 176400;
+		break;
+	case SNDRV_PCM_RATE_192000:
+		prtd->sample_rate = 192000;
+		break;
+	}
+
+	pr_debug("%s: sample_rate %d\n", __func__, prtd->sample_rate);
 
 	prtd->compr_passthr = prtd->codec_param.codec.compr_passthr;
 	pr_debug("%s: compr_passthr = %d", __func__, prtd->compr_passthr);
@@ -1272,17 +1315,6 @@ static int msm_compr_set_params(struct snd_compr_stream *cstream,
 			delay_time_ms - PARTIAL_DRAIN_ACK_EARLY_BY_MSEC : 0;
 	prtd->partial_drain_delay = delay_time_ms;
 
-	/*
-	 * To support 12000 and 24000 sample rates, allow raw HZ values.
-	 * https://www.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/
-	 * ?id=423b7e3331b767aa1d6546557f1533879aa781bf
-	 */
-	memcpy(&prtd->codec_param, params, sizeof(struct snd_compr_params));
-
-	/* ToDo: remove duplicates */
-	prtd->num_channels = prtd->codec_param.codec.ch_in;
-	prtd->sample_rate = prtd->codec_param.codec.sample_rate;
-	pr_debug("%s: sample_rate %d\n", __func__, prtd->sample_rate);
 	ret = msm_compr_configure_dsp(cstream);
 
 	return ret;
@@ -1803,8 +1835,7 @@ static int msm_compr_pointer(struct snd_compr_stream *cstream,
 	*/
 	if (!first_buffer || gapless_transition) {
 		if (gapless_transition)
-			pr_debug("%s session time in gapless transition",
-				 __func__);
+			pr_debug("%s session time in gapless transition", __func__);
 
 		rc = q6asm_get_session_time(prtd->audio_client, &timestamp);
 		if (rc < 0) {
@@ -1951,7 +1982,7 @@ static int msm_compr_get_caps(struct snd_compr_stream *cstream,
 		memcpy(arg, &prtd->compr_cap, sizeof(struct snd_compr_caps));
 	} else {
 		ret = -EINVAL;
-		pr_err("%s: arg (0x%p), prtd (0x%p)\n", __func__, arg, prtd);
+		pr_err("%s: arg (0x%pK), prtd (0x%pK)\n", __func__, arg, prtd);
 	}
 
 	return ret;
@@ -2194,14 +2225,6 @@ static int msm_compr_audio_effects_config_put(struct snd_kcontrol *kcontrol,
 						prtd->audio_client->topology))
 			msm_audio_effects_bass_boost_handler(prtd->audio_client,
 						   &(audio_effects->bass_boost),
-						     values);
-		break;
-	case PBE_MODULE:
-		pr_debug("%s: PBE_MODULE\n", __func__);
-		if (msm_audio_effects_is_effmodule_supp_in_top(effects_module,
-						prtd->audio_client->topology))
-			msm_audio_effects_pbe_handler(prtd->audio_client,
-						   &(audio_effects->pbe),
 						     values);
 		break;
 	case EQ_MODULE:
@@ -2474,7 +2497,7 @@ static int msm_compr_app_type_cfg_info(struct snd_kcontrol *kcontrol,
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->count = 5;
 	uinfo->value.integer.min = 0;
-	uinfo->value.integer.max = 0x7FFFFFFF;
+	uinfo->value.integer.max = 0xFFFFFFFF;
 	return 0;
 }
 
