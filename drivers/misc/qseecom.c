@@ -2300,7 +2300,11 @@ static int __qseecom_send_cmd(struct qseecom_dev_handle *data,
 		return -EINVAL;
 	}
 	
-	send_data_req.qsee_cmd_id = QSEOS_CLIENT_SEND_DATA_COMMAND;
+	if (qseecom.whitelist_support == false || data->use_legacy_cmd == true)
+		send_data_req.qsee_cmd_id = QSEOS_CLIENT_SEND_DATA_COMMAND;
+	else
+		send_data_req.qsee_cmd_id =
+				QSEOS_CLIENT_SEND_DATA_COMMAND_WHITELIST;
 
 	send_data_req.app_id = data->client.app_id;
 	send_data_req.req_ptr = (uint32_t)(__qseecom_uvirt_to_kphys(data,
