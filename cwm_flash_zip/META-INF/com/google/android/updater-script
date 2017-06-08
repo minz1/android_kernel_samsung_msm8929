@@ -1,20 +1,7 @@
-ui_print("Squid Kernel for Motorola MSM8916 Devices");
+ui_print("minz1's TouchWiz Kernel");
 
-assert(getprop("ro.product.device") == "surnia" ||
-       getprop("ro.product.device") == "surnia_umts" ||
-       getprop("ro.product.device") == "surnia_uds" ||
-       getprop("ro.product.device") == "surnia_udstv" ||
-       getprop("ro.product.device") == "osprey" ||
-       getprop("ro.product.device") == "osprey_umts" ||
-       getprop("ro.product.device") == "osprey_u2" ||
-       getprop("ro.product.device") == "osprey_ud2" ||
-       getprop("ro.product.device") == "osprey_uds" ||
-       getprop("ro.product.device") == "osprey_cdma" ||
-       getprop("ro.product.device") == "osprey_udstv" ||
-       getprop("ro.product.device") == "harpia" ||
-       getprop("ro.product.device") == "merlin" ||
-       getprop("ro.product.device") == "lux" ||
-       abort("This package is for device: surnia,osprey,harpia,merlin,lux; this device is " +
+assert(getprop("ro.product.device") == "j7ltespr" ||
+       abort("This package is for device: j7ltespr; this device is " +
              getprop("ro.product.device") + "."););
 
 ui_print("Extracting flashing tools...");
