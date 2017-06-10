@@ -2956,6 +2956,7 @@ err_capt_buf:
 
 	return ret;
 }
+
 EXPORT_SYMBOL_GPL(wm_adsp_stream_alloc);
 
 int wm_adsp_stream_free(struct wm_adsp *adsp)
